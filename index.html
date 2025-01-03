@@ -13,7 +13,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
     <link rel="shortcut icon" href="/favicon/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content=""Yettilik" davomati" />
+    <meta name="apple-mobile-web-app-title" content="Yettilik davomati" />
     <link rel="manifest" href="/favicon/site.webmanifest" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
@@ -51,124 +51,55 @@
             <div id="reader" class="my-4"></div>
             <p id="response" class="text-center text-blue-600 font-semibold mt-4" style="font-size: 20px;"></p>
             <button class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700" onclick="requestCameraPermission()">Kameraga ruxsat berish</button>
-<!-- Admin Panelda Davomat Sababi tugmasi -->
-<button id="davomatSababiButton" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4 hidden" onclick="showAttendanceReasonPopup()">Davomat sababini kiritish</button>
+            <button id="davomatSababiButton" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4 hidden" onclick="showAttendanceReasonPopup()">Davomat sababini kiritish</button>
         </div>
     </div>
-<!-- Pop-up -->
-<div id="davomatSababiPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center hidden">
-    <div class="bg-white p-6 rounded-lg w-96">
-        <h3 class="text-center text-xl font-semibold mb-4">Davomat Sababini Kiriting</h3>
-        <div id="employeeList"></div> <!-- Xodimlar ro'yxati uchun joy -->
-        <button class="mt-4 w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700" onclick="saveAttendanceReason()">Saqlash</button>
-        <button class="mt-2 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700" onclick="closePopup()">Yopish</button>
+
+    <!-- Pop-up -->
+    <div id="davomatSababiPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center hidden">
+        <div class="bg-white p-6 rounded-lg w-96">
+            <h3 class="text-center text-xl font-semibold mb-4">Davomat Sababini Kiriting</h3>
+            <div id="employeeList"></div> <!-- Xodimlar ro'yxati uchun joy -->
+            <button class="mt-4 w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700" onclick="saveAttendanceReason()">Saqlash</button>
+            <button class="mt-2 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700" onclick="closePopup()">Yopish</button>
+        </div>
     </div>
-</div>
 
     <script>
-        // Kutilgan joylashuv (lat, lon)
-        const expectedLocation = { lat: 38.6356678, lon: 66.2195272 };
-        const locationAccuracyThreshold = 0.0001; // Joylashuv aniqligi uchun og'ish
-
-        // Geolokatsiyani tekshirish
-        function checkLocation() {
-            return new Promise((resolve, reject) => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        const distance = Math.sqrt(
-                            Math.pow(lat - expectedLocation.lat, 2) + Math.pow(lon - expectedLocation.lon, 2)
-                        );
-
-                        if (distance < locationAccuracyThreshold) {
-                            resolve(true);  // Kutilgan joylashuvga yetib keldi
-                        } else {
-                            reject('Siz ish joyingizda emassiz.');  // Joylashuv mos kelmayapti
-                        }
-                    }, function() {
-                        reject("Qurilmangizda Lokatsiyani qo'shing ");
-                    });
-                } else {
-                    reject('Geolokatsiya qo\'llab-quvvatlanmaydi.');
-                }
-            });
-        }
-
-        // URL parametrlarini olish va login qilish
-        function getUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const email = urlParams.get('email');
-            const password = urlParams.get('password');
-
-            if (email && password) {
-                document.getElementById('email').value = email;
-                document.getElementById('password').value = password;
-                handleLogin(email, password);
-            }
-        }
-
-        // Login qilish funksiyasi
         async function handleLogin(email, password) {
-    try {
-        const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/token?grant_type=password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8' // "anonpublic" kalit
-            },
-            body: JSON.stringify({ email, password })
-        });
+            try {
+                const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/token?grant_type=password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
 
-        const result = await response.json();
-        if (result.access_token) {
-            localStorage.setItem('userLoggedIn', 'true');
-            document.getElementById('loginModal').classList.add('hidden');
-            document.getElementById('qrScanner').classList.remove('hidden');
-            requestCameraPermission(); // Kamerani ishga tushirish
+                const result = await response.json();
 
-            // Foydalanuvchining roli tekshiriladi
-            if (result.role === 'admin') {
-                document.getElementById('davomatSababiButton').classList.remove('hidden');
-            } else {
-                document.getElementById('davomatSababiButton').classList.add('hidden');
+                if (result.access_token) {
+                    localStorage.setItem('userLoggedIn', 'true');
+                    document.getElementById('loginModal').classList.add('hidden');
+                    document.getElementById('qrScanner').classList.remove('hidden');
+                    requestCameraPermission();
+
+                    if (result.role === 'admin') {
+                        document.getElementById('davomatSababiButton').classList.remove('hidden');
+                    } else {
+                        document.getElementById('davomatSababiButton').classList.add('hidden');
+                    }
+                } else {
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Xatolik yuz berdi:', error);
+                document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
+                document.getElementById('loginError').classList.remove('hidden');
             }
-        } else {
-            document.getElementById('loginError').classList.remove('hidden');
         }
-    } catch (error) {
-        console.error('Xatolik yuz berdi:', error);
-        document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
-        document.getElementById('loginError').classList.remove('hidden');
-    }
-}
 
-        const result = await response.json();
-        if (result.status === 'success') {
-            document.getElementById('loginModal').classList.add('hidden');
-            document.getElementById('qrScanner').classList.remove('hidden');
-            localStorage.setItem('userLoggedIn', 'true');
-            requestCameraPermission(); // Kamerani ishga tushirish
-            
-            // Foydalanuvchining roli tekshiriladi
-            if (result.role === 'admin') {
-                document.getElementById('davomatSababiButton').classList.remove('hidden');
-            } else {
-                document.getElementById('davomatSababiButton').classList.add('hidden');
-            }
-        } else {
-            document.getElementById('loginError').classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Xatolik yuz berdi:', error);
-        document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
-        document.getElementById('loginError').classList.remove('hidden');
-    }
-}e('hidden');
-    }
-}
-
-        // Kamera ruxsatini olish
         function requestCameraPermission() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
@@ -191,13 +122,10 @@
             }
         }
 
-        // QR kodni muvaffaqiyatli skanerlash
         function onScanSuccess(decodedText, decodedResult) {
             const responseElement = document.getElementById('response');
 
-            // Joylashuvni tekshirish
             checkLocation().then(() => {
-                // Joylashuv mos kelsa, davomatni yuborish
                 fetch('davomat.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -216,7 +144,6 @@
                     responseElement.innerText = 'Xatolik yuz berdi: ' + err.message;
                 });
             }).catch(error => {
-                // Agar joylashuv mos kelmasa, xabar berish
                 responseElement.innerText = error;
             });
         }
@@ -225,84 +152,64 @@
             console.warn(`QR kodni o'qib bo'lmadi: ${error}`);
         }
 
-        // Sahifa yuklanganda URL parametrlarini tekshirib login qilish
-        window.onload = function() {
-            getUrlParams();
-        };
-function showAttendanceReasonPopup() {
-    // Xodimlarni olish uchun serverga so'rov yuborish
-    fetch('getEmployees.php')
-        .then(response => response.json())
-        .then(data => {
-            const employeeList = document.getElementById('employeeList');
-            employeeList.innerHTML = ''; // Ro'yxatni tozalash
+        function closePopup() {
+            document.getElementById('davomatSababiPopup').classList.add('hidden');
+        }
 
-            // Har bir xodim uchun input yaratish
-            data.forEach(employee => {
-                const div = document.createElement('div');
-                div.classList.add('mb-4');
-                div.innerHTML = `
-                    <label for="employee_${employee.id}" class="block text-sm">${employee.nomi}</label>
-                    <input type="text" id="employee_${employee.id}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Davomat sababini yozing">
-                `;
-                employeeList.appendChild(div);
+        function saveAttendanceReason() {
+            const reasons = [];
+            const employees = document.querySelectorAll('#employeeList input');
+
+            employees.forEach(input => {
+                if (input.value.trim()) {
+                    reasons.push({
+                        employeeId: input.id.split('_')[1],
+                        reason: input.value
+                    });
+                }
             });
 
-            // Pop-upni ko'rsatish
-            document.getElementById('davomatSababiPopup').classList.remove('hidden');
-        })
-        .catch(error => {
-            console.error('Xodimlar ro\'yxatini olishda xatolik yuz berdi:', error);
-        });
-}
-
-function closePopup() {
-    document.getElementById('davomatSababiPopup').classList.add('hidden');
-}
-
-function saveAttendanceReason() {
-    const reasons = [];
-    const employees = document.querySelectorAll('#employeeList input');
-
-    employees.forEach(input => {
-        if (input.value.trim()) {
-            reasons.push({
-                employeeId: input.id.split('_')[1], // Xodim ID-si
-                reason: input.value.trim(),  // Sabab
-                date: new Date().toISOString().split('T')[0] // Hozirgi sana (YYYY-MM-DD formatida)
+            fetch('davomat_sababi.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reasons })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Davomat sababi saqlandi.');
+                    closePopup();
+                } else {
+                    alert('Xatolik yuz berdi: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Xatolik:', error);
+                alert('Xatolik yuz berdi: ' + error.message);
             });
         }
-    });
 
-    console.log("Yuborilayotgan sabablari:", reasons);  // Yuborilayotgan sabablari tekshirib ko'ring
+        async function checkLocation() {
+            try {
+                const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/user', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                const userData = await response.json();
 
-    if (reasons.length > 0) {
-        fetch('saveAttendanceReason.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ reasons }) // JSON formatda yuborish
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log("PHP javobi:", data);  // PHP javobini tekshirib ko'ring
-            if (data.status === 'success') {
-                alert('Davomat sabablari saqlandi.');
-                closePopup();  // Pop-upni yopish
-            } else {
-                alert('Xatolik yuz berdi: ' + data.message);
+                if (!userData || !userData.location) {
+                    throw new Error('Geolocation ruxsat etilmagan.');
+                }
+            } catch (error) {
+                throw new Error('Xatolik yuz berdi: ' + error.message);
             }
-        })
-        .catch(error => {
-            console.error('Xatolik:', error);
-            alert('Xatolik yuz berdi!');
-        });
-    } else {
-        alert('Iltimos, kamida biror sabab kiriting.');
-    }
-}
-    </script>
+        }
 
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            handleLogin(email, password);
+        });
+    </script>
 </body>
 </html>
