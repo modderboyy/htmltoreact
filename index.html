@@ -6,9 +6,14 @@
     <title>Xodimlar Davomati</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Yettilik davomati" />
+    <link rel="manifest" href="/favicon/site.webmanifest" />
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -34,7 +39,7 @@
                     <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">Tizimga Kirish</button>
                 </div>
             </form>
-            <p id="loginError" class="text-red-500 text-center mt-2 hidden">Email yoki parol noto'g'ri!</p>
+            <p id="loginError" class="text-red-500 text-center mt-2 hidden">Email yoki parol noto‘g‘ri!</p>
         </div>
 
         <!-- QR Kod Skaneri -->
@@ -44,92 +49,52 @@
             <div id="reader" class="my-4"></div>
             <p id="response" class="text-center text-blue-600 font-semibold mt-4" style="font-size: 20px;"></p>
             <button class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700" onclick="requestCameraPermission()">Kameraga ruxsat berish</button>
+            <button id="davomatSababiButton" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4 hidden" onclick="showAttendanceReasonPopup()">Davomat sababini kiritish</button>
+        </div>
+    </div>
+
+    <!-- Pop-up -->
+    <div id="davomatSababiPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center hidden">
+        <div class="bg-white p-6 rounded-lg w-96">
+            <h3 class="text-center text-xl font-semibold mb-4">Davomat Sababini Kiriting</h3>
+            <div id="employeeList"></div> <!-- Xodimlar ro'yxati uchun joy -->
+            <button class="mt-4 w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700" onclick="saveAttendanceReason()">Saqlash</button>
+            <button class="mt-2 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700" onclick="closePopup()">Yopish</button>
         </div>
     </div>
 
     <script>
-        // Initialize Supabase client
-        const SUPABASE_URL = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let currentUser = null;
-
-        // Check if user is already logged in
-        async function checkUser() {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if (user) {
-                currentUser = user;
-                showQRScanner();
-            }
-        }
-
-        // Run on page load
-        checkUser();
-
         async function handleLogin(email, password) {
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
+                const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/token?grant_type=password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'
+                    },
+                    body: JSON.stringify({ email, password })
                 });
 
-                if (error) {
-                    throw error;
-                }
+                const result = await response.json();
 
-                if (data.user) {
-                    currentUser = data.user;
-                    showQRScanner();
-                }
-            } catch (error) {
-                console.error('Login error:', error.message);
-                document.getElementById('loginError').textContent = error.message;
-                document.getElementById('loginError').classList.remove('hidden');
-            }
-        }
+                if (result.access_token) {
+                    localStorage.setItem('userLoggedIn', 'true');
+                    document.getElementById('loginModal').classList.add('hidden');
+                    document.getElementById('qrScanner').classList.remove('hidden');
+                    requestCameraPermission();
 
-        function showQRScanner() {
-            document.getElementById('loginModal').classList.add('hidden');
-            document.getElementById('qrScanner').classList.remove('hidden');
-            requestCameraPermission();
-        }
-
-        async function handleQRCode(qrCode) {
-            try {
-                if (!currentUser) {
-                    throw new Error('Foydalanuvchi tizimga kirmagan');
-                }
-
-                // Get user's details including qr_code_kelish
-                const { data: userData, error: userError } = await supabase
-                    .from('profiles')  // 'profiles' jadvaliga o'zgartiring agar boshqa jadval nomingiz bo'lsa
-                    .select('qr_code_kelish')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (userError) throw userError;
-
-                if (userData.qr_code_kelish === qrCode) {
-                    // Insert attendance record
-                    const { data, error } = await supabase
-                        .from('davomat')
-                        .insert([
-                            {
-                                user_id: currentUser.id,
-                                kelish_vaqti: new Date().toISOString()
-                            }
-                        ]);
-
-                    if (error) throw error;
-
-                    document.getElementById('response').innerText = 'Davomat muvaffaqiyatli qayd etildi';
+                    if (result.role === 'admin') {
+                        document.getElementById('davomatSababiButton').classList.remove('hidden');
+                    } else {
+                        document.getElementById('davomatSababiButton').classList.add('hidden');
+                    }
                 } else {
-                    document.getElementById('response').innerText = 'QR kod noto\'g\'ri';
+                    document.getElementById('loginError').classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('Attendance error:', error.message);
-                document.getElementById('response').innerText = 'Xatolik yuz berdi: ' + error.message;
+                console.error('Xatolik yuz berdi:', error);
+                document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
+                document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
@@ -156,11 +121,85 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            handleQRCode(decodedText);
+            const responseElement = document.getElementById('response');
+
+            checkLocation().then(() => {
+                fetch('davomat.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ qr_code: decodedText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'warning') {
+                        responseElement.innerText = 'Xodim ishga kelgan';
+                    } else {
+                        responseElement.innerText = data.message;
+                    }
+                })
+                .catch(err => {
+                    console.error('Xatolik:', err);
+                    responseElement.innerText = 'Xatolik yuz berdi: ' + err.message;
+                });
+            }).catch(error => {
+                responseElement.innerText = error;
+            });
         }
 
         function onScanFailure(error) {
             console.warn(`QR kodni o'qib bo'lmadi: ${error}`);
+        }
+
+        function closePopup() {
+            document.getElementById('davomatSababiPopup').classList.add('hidden');
+        }
+
+        function saveAttendanceReason() {
+            const reasons = [];
+            const employees = document.querySelectorAll('#employeeList input');
+
+            employees.forEach(input => {
+                if (input.value.trim()) {
+                    reasons.push({
+                        employeeId: input.id.split('_')[1],
+                        reason: input.value
+                    });
+                }
+            });
+
+            fetch('davomat_sababi.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reasons })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Davomat sababi saqlandi.');
+                    closePopup();
+                } else {
+                    alert('Xatolik yuz berdi: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Xatolik:', error);
+                alert('Xatolik yuz berdi: ' + error.message);
+            });
+        }
+
+        async function checkLocation() {
+            try {
+                const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/user', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                const userData = await response.json();
+
+                if (!userData || !userData.location) {
+                    throw new Error('Geolocation ruxsat etilmagan.');
+                }
+            } catch (error) {
+                throw new Error('Xatolik yuz berdi: ' + error.message);
+            }
         }
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
