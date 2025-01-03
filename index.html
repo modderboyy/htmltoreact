@@ -6,7 +6,7 @@
     <title>Xodimlar Davomati</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -17,7 +17,6 @@
     </style>
 </head>
 <body class="bg-gray-100">
-    <!-- Same HTML structure as before -->
     <div class="min-h-screen flex items-center justify-center">
         <!-- Login Modal -->
         <div id="loginModal" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
@@ -50,9 +49,23 @@
 
     <script>
         // Initialize Supabase client
-        const supabase = createClient('https://kbzxwaolakuykdbhfmuz.supabase.co', 
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'
-        );
+        const SUPABASE_URL = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+
+        // Check if user is already logged in
+        async function checkUser() {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (user) {
+                currentUser = user;
+                showQRScanner();
+            }
+        }
+
+        // Run on page load
+        checkUser();
 
         async function handleLogin(email, password) {
             try {
@@ -61,30 +74,38 @@
                     password: password
                 });
 
-                if (error) throw error;
+                if (error) {
+                    throw error;
+                }
 
                 if (data.user) {
-                    localStorage.setItem('userLoggedIn', 'true');
-                    localStorage.setItem('userId', data.user.id);
-                    document.getElementById('loginModal').classList.add('hidden');
-                    document.getElementById('qrScanner').classList.remove('hidden');
-                    requestCameraPermission();
+                    currentUser = data.user;
+                    showQRScanner();
                 }
             } catch (error) {
                 console.error('Login error:', error.message);
+                document.getElementById('loginError').textContent = error.message;
                 document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
+        function showQRScanner() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('qrScanner').classList.remove('hidden');
+            requestCameraPermission();
+        }
+
         async function handleQRCode(qrCode) {
             try {
-                const userId = localStorage.getItem('userId');
-                
-                // First, check if the QR code matches the user's qr_code_kelish
+                if (!currentUser) {
+                    throw new Error('Foydalanuvchi tizimga kirmagan');
+                }
+
+                // Get user's details including qr_code_kelish
                 const { data: userData, error: userError } = await supabase
-                    .from('auth.users')
+                    .from('profiles')  // 'profiles' jadvaliga o'zgartiring agar boshqa jadval nomingiz bo'lsa
                     .select('qr_code_kelish')
-                    .eq('id', userId)
+                    .eq('id', currentUser.id)
                     .single();
 
                 if (userError) throw userError;
@@ -95,8 +116,8 @@
                         .from('davomat')
                         .insert([
                             {
-                                user_id: userId,
-                                kelish_vaqti: new Date().toISOString(),
+                                user_id: currentUser.id,
+                                kelish_vaqti: new Date().toISOString()
                             }
                         ]);
 
