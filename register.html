@@ -41,7 +41,8 @@
 
     <script>
         const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
-const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTkyMjczMywiZXhwIjoyMDUxNDk4NzMzfQ.WDJAhqH8Z5uQJtvt2ckocwmOPR_GUOeqI7xs0JgdLvQ'; // Supabase API kaliti (Service Role)
+        const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTkyMjczMywiZXhwIjoyMDUxNDk4NzMzfQ.WDJAhqH8Z5uQJtvt2ckocwmOPR_GUOeqI7xs0JgdLvQ'; // Supabase API kaliti
+
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -56,13 +57,13 @@ const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 
             try {
                 const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`
-    },
-    body: JSON.stringify({ email, password })
-});
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseServiceRoleKey}`
+                    },
+                    body: JSON.stringify({ email, password })
+                });
 
                 const result = await response.json();
 
