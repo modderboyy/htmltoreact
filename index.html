@@ -123,61 +123,33 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            fetchUserIdFromQrCode(decodedText)
-                .then(userId => {
-                    saveAttendance(userId, decodedText);
+            const responseElement = document.getElementById('response');
+
+            checkLocation().then(() => {
+                fetch('davomat.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ qr_code: decodedText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'warning') {
+                        responseElement.innerText = 'Xodim ishga kelgan';
+                    } else {
+                        responseElement.innerText = data.message;
+                    }
                 })
                 .catch(err => {
-                    console.error('Foydalanuvchi aniqlanmadi yoki xatolik:', err);
-                    document.getElementById('response').innerText = 'Xatolik yuz berdi: ' + err.message;
+                    console.error('Xatolik:', err);
+                    responseElement.innerText = 'Xatolik yuz berdi: ' + err.message;
                 });
+            }).catch(error => {
+                responseElement.innerText = error;
+            });
         }
 
         function onScanFailure(error) {
             console.warn(`QR kodni o'qib bo'lmadi: ${error}`);
-        }
-
-        async function fetchUserIdFromQrCode(qrCode) {
-            try {
-                const response = await fetch(`https://kbzxwaolakuykdbhfmuz.supabase.co/rest/v1/users?qr_code_kelish=eq.${qrCode}`, {
-                    method: 'GET',
-                    headers: {
-                        'apikey': 'YOUR_SUPABASE_API_KEY',
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                const data = await response.json();
-                if (data.length > 0) {
-                    return data[0].id;
-                } else {
-                    throw new Error('Foydalanuvchi topilmadi.');
-                }
-            } catch (error) {
-                console.error('Xatolik:', error);
-                throw error;
-            }
-        }
-
-        function saveAttendance(userId, qrCode) {
-            fetch('davomat_saqlash.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, qr_code: qrCode, time: new Date().toISOString() })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('Davomat muvaffaqiyatli saqlandi.');
-                } else {
-                    alert('Xatolik yuz berdi: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Xatolik:', error);
-                alert('Xatolik yuz berdi: ' + error.message);
-            });
         }
 
         function closePopup() {
@@ -215,6 +187,21 @@
                 console.error('Xatolik:', error);
                 alert('Xatolik yuz berdi: ' + error.message);
             });
+        }
+
+        async function checkLocation() {
+            try {
+                const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/user', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                const userData = await response.json();
+
+                if (!userData || !userData.location) {
+                    throw new Error('Geolocation ruxsat etilmagan.');
+                }
+            } catch (error) {
+                throw new Error('Xatolik yuz berdi: ' + error.message);
+            }
         }
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
