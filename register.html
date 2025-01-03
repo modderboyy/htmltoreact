@@ -1,117 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Ro'yxatdan o'tish</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
-            width: 100%;
-        }
-        .container h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .container label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        .container input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .container button {
-            width: 100%;
-            padding: 10px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .container button:hover {
-            background: #0056b3;
-        }
-        .error, .success {
-            text-align: center;
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .error {
-            color: #842029;
-            background-color: #f8d7da;
-            border: 1px solid #f5c2c7;
-        }
-        .success {
-            color: #0f5132;
-            background-color: #d1e7dd;
-            border: 1px solid #badbcc;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h2>Register</h2>
-        <form id="registerForm">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" placeholder="Enter your full name" required>
-
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" required>
-
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required>
-
-            <button type="submit">Register</button>
-        </form>
-        <div id="message"></div>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <div id="registerModal" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+            <h3 class="text-center text-2xl font-semibold mb-4">Ro'yxatdan o'tish</h3>
+            <form id="registerForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Parol</label>
+                    <input type="password" id="password" name="password" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Parolni tasdiqlash</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">Ro'yxatdan o'tish</button>
+                </div>
+            </form>
+            <p id="registerError" class="text-red-500 text-center mt-2 hidden">Xatolik yuz berdi! Ma'lumotlar noto'g'ri.</p>
+        </div>
     </div>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
+        const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'; // Supabase API kaliti
 
-            const name = document.getElementById('name').value;
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                document.getElementById('registerError').innerText = 'Parollar bir xil emas!';
+                document.getElementById('registerError').classList.remove('hidden');
+                return;
+            }
 
             try {
-                const response = await fetch('register.php', {
+                const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseAnonKey}`
+                    },
+                    body: JSON.stringify({ email, password })
                 });
 
                 const result = await response.json();
-                const messageDiv = document.getElementById('message');
 
-                if (result.status === 'success') {
-                    messageDiv.innerHTML = `<div class="success">${result.message}</div>`;
+                if (result.user) {
+                    alert('Ro\'yxatdan muvaffaqiyatli o\'tdingiz!');
                 } else {
-                    messageDiv.innerHTML = `<div class="error">${result.message}</div>`;
+                    document.getElementById('registerError').innerText = result.message || 'Xatolik yuz berdi!';
+                    document.getElementById('registerError').classList.remove('hidden');
                 }
             } catch (error) {
-                document.getElementById('message').innerHTML = `<div class="error">Xatolik yuz berdi!</div>`;
-                console.error('Error:', error);
+                console.error('Xatolik:', error);
+                document.getElementById('registerError').innerText = 'Xatolik yuz berdi!';
+                document.getElementById('registerError').classList.remove('hidden');
             }
         });
     </script>
