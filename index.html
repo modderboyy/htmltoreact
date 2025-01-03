@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xodimlar Davomati</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Material Design 3 (M3) uchun CSS va fontlar -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content=""Yettilik" davomati" />
+    <link rel="manifest" href="/favicon/site.webmanifest" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <!-- Login Modal -->
+        <div id="loginModal" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+            <h3 class="text-center text-2xl font-semibold mb-4">Tizimga Kirish</h3>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Parol</label>
+                    <input type="password" id="password" name="password" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">Tizimga Kirish</button>
+                </div>
+            </form>
+            <p id="loginError" class="text-red-500 text-center mt-2 hidden">Email yoki parol noto‘g‘ri!</p>
+        </div>
+
+        <!-- QR Kod Skaneri -->
+        <div id="qrScanner" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg hidden">
+            <h3 class="text-center text-2xl font-semibold mb-4">"Yettilik" Davomati</h3>
+            <p class="text-center">QR kodni skanerlash orqali xodimlar davomati tizimiga kirish mumkin.</p>
+            <div id="reader" class="my-4"></div>
+            <p id="response" class="text-center text-blue-600 font-semibold mt-4" style="font-size: 20px;"></p>
+            <button class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700" onclick="requestCameraPermission()">Kameraga ruxsat berish</button>
+<!-- Admin Panelda Davomat Sababi tugmasi -->
+<button id="davomatSababiButton" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4 hidden" onclick="showAttendanceReasonPopup()">Davomat sababini kiritish</button>
+        </div>
+    </div>
+<!-- Pop-up -->
+<div id="davomatSababiPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center hidden">
+    <div class="bg-white p-6 rounded-lg w-96">
+        <h3 class="text-center text-xl font-semibold mb-4">Davomat Sababini Kiriting</h3>
+        <div id="employeeList"></div> <!-- Xodimlar ro'yxati uchun joy -->
+        <button class="mt-4 w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700" onclick="saveAttendanceReason()">Saqlash</button>
+        <button class="mt-2 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700" onclick="closePopup()">Yopish</button>
+    </div>
+</div>
+
+    <script>
+        // Kutilgan joylashuv (lat, lon)
+        const expectedLocation = { lat: 38.6356678, lon: 66.2195272 };
+        const locationAccuracyThreshold = 0.0001; // Joylashuv aniqligi uchun og'ish
+
+        // Geolokatsiyani tekshirish
+        function checkLocation() {
+            return new Promise((resolve, reject) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const distance = Math.sqrt(
+                            Math.pow(lat - expectedLocation.lat, 2) + Math.pow(lon - expectedLocation.lon, 2)
+                        );
+
+                        if (distance < locationAccuracyThreshold) {
+                            resolve(true);  // Kutilgan joylashuvga yetib keldi
+                        } else {
+                            reject('Siz ish joyingizda emassiz.');  // Joylashuv mos kelmayapti
+                        }
+                    }, function() {
+                        reject("Qurilmangizda Lokatsiyani qo'shing ");
+                    });
+                } else {
+                    reject('Geolokatsiya qo\'llab-quvvatlanmaydi.');
+                }
+            });
+        }
+
+        // URL parametrlarini olish va login qilish
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email');
+            const password = urlParams.get('password');
+
+            if (email && password) {
+                document.getElementById('email').value = email;
+                document.getElementById('password').value = password;
+                handleLogin(email, password);
+            }
+        }
+
+        // Login qilish funksiyasi
+        async function handleLogin(email, password) {
+    try {
+        const response = await fetch('login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('qrScanner').classList.remove('hidden');
+            localStorage.setItem('userLoggedIn', 'true');
+            requestCameraPermission(); // Kamerani ishga tushirish
+            
+            // Foydalanuvchining roli tekshiriladi
+            if (result.role === 'admin') {
+                document.getElementById('davomatSababiButton').classList.remove('hidden');
+            } else {
+                document.getElementById('davomatSababiButton').classList.add('hidden');
+            }
+        } else {
+            document.getElementById('loginError').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Xatolik yuz berdi:', error);
+        document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
+        document.getElementById('loginError').classList.remove('hidden');
+    }
+}
+
+        // Kamera ruxsatini olish
+        function requestCameraPermission() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(function(stream) {
+                        const html5QrCode = new Html5Qrcode("reader");
+                        html5QrCode.start(
+                            { facingMode: "environment" },
+                            { fps: 10, qrbox: { width: 250, height: 250 } },
+                            onScanSuccess,
+                            onScanFailure
+                        ).catch(err => {
+                            console.error("Kamerani ishga tushirishda xatolik yuz berdi: ", err);
+                        });
+                    })
+                    .catch(function(err) {
+                        alert("Kamera ruxsatini olishda xatolik yuz berdi: " + err);
+                    });
+            } else {
+                alert("Bu brauzer kamerani qo'llab-quvvatlamaydi.");
+            }
+        }
+
+        // QR kodni muvaffaqiyatli skanerlash
+        function onScanSuccess(decodedText, decodedResult) {
+            const responseElement = document.getElementById('response');
+
+            // Joylashuvni tekshirish
+            checkLocation().then(() => {
+                // Joylashuv mos kelsa, davomatni yuborish
+                fetch('davomat.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ qr_code: decodedText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'warning') {
+                        responseElement.innerText = 'Xodim ishga kelgan';
+                    } else {
+                        responseElement.innerText = data.message;
+                    }
+                })
+                .catch(err => {
+                    console.error('Xatolik:', err);
+                    responseElement.innerText = 'Xatolik yuz berdi: ' + err.message;
+                });
+            }).catch(error => {
+                // Agar joylashuv mos kelmasa, xabar berish
+                responseElement.innerText = error;
+            });
+        }
+
+        function onScanFailure(error) {
+            console.warn(`QR kodni o'qib bo'lmadi: ${error}`);
+        }
+
+        // Sahifa yuklanganda URL parametrlarini tekshirib login qilish
+        window.onload = function() {
+            getUrlParams();
+        };
+function showAttendanceReasonPopup() {
+    // Xodimlarni olish uchun serverga so'rov yuborish
+    fetch('getEmployees.php')
+        .then(response => response.json())
+        .then(data => {
+            const employeeList = document.getElementById('employeeList');
+            employeeList.innerHTML = ''; // Ro'yxatni tozalash
+
+            // Har bir xodim uchun input yaratish
+            data.forEach(employee => {
+                const div = document.createElement('div');
+                div.classList.add('mb-4');
+                div.innerHTML = `
+                    <label for="employee_${employee.id}" class="block text-sm">${employee.nomi}</label>
+                    <input type="text" id="employee_${employee.id}" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Davomat sababini yozing">
+                `;
+                employeeList.appendChild(div);
+            });
+
+            // Pop-upni ko'rsatish
+            document.getElementById('davomatSababiPopup').classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Xodimlar ro\'yxatini olishda xatolik yuz berdi:', error);
+        });
+}
+
+function closePopup() {
+    document.getElementById('davomatSababiPopup').classList.add('hidden');
+}
+
+function saveAttendanceReason() {
+    const reasons = [];
+    const employees = document.querySelectorAll('#employeeList input');
+
+    employees.forEach(input => {
+        if (input.value.trim()) {
+            reasons.push({
+                employeeId: input.id.split('_')[1], // Xodim ID-si
+                reason: input.value.trim(),  // Sabab
+                date: new Date().toISOString().split('T')[0] // Hozirgi sana (YYYY-MM-DD formatida)
+            });
+        }
+    });
+
+    console.log("Yuborilayotgan sabablari:", reasons);  // Yuborilayotgan sabablari tekshirib ko'ring
+
+    if (reasons.length > 0) {
+        fetch('saveAttendanceReason.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reasons }) // JSON formatda yuborish
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("PHP javobi:", data);  // PHP javobini tekshirib ko'ring
+            if (data.status === 'success') {
+                alert('Davomat sabablari saqlandi.');
+                closePopup();  // Pop-upni yopish
+            } else {
+                alert('Xatolik yuz berdi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Xatolik:', error);
+            alert('Xatolik yuz berdi!');
+        });
+    } else {
+        alert('Iltimos, kamida biror sabab kiriting.');
+    }
+}
+    </script>
+
+</body>
+</html>

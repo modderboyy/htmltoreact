@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mening Davomatim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+            <h3 class="text-center text-2xl font-semibold mb-4">Mening Davomatim</h3>
+            <div id="davomatTable" class="space-y-4">
+                <p id="noDataMessage" class="text-center text-gray-500">Davomat ma'lumotlari yo'q.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // Foydalanuvchi ID'sini localStorage'dan olish
+            const xodimId = localStorage.getItem('xodimId');
+            
+            if (xodimId) {
+                fetchDavomatMa'lumotlari(xodimId);
+            } else {
+                alert('Foydalanuvchi tizimga kirishmagan.');
+                window.location.href = 'davomatlgn.html'; // Login sahifasiga qaytish
+            }
+        };
+
+        // Davomat ma'lumotlarini olish
+        async function fetchDavomatMa'lumotlari(xodimId) {
+            try {
+                const response = await fetch('davomatim.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ xodim_id: xodimId })
+                });
+
+                const results = await response.json();
+                const davomatTable = document.getElementById('davomatTable');
+                const noDataMessage = document.getElementById('noDataMessage');
+                
+                // Ma'lumotlarni ekranga chiqarish
+                if (results.length > 0) {
+                    noDataMessage.classList.add('hidden');
+                    results.forEach(davomat => {
+                        const davomatRow = document.createElement('div');
+                        davomatRow.classList.add('border-b', 'py-4');
+                        
+                        davomatRow.innerHTML = `
+                            <p><strong>Ism:</strong> ${davomat.ism}</p>
+                            <p><strong>Kelish vaqti:</strong> ${davomat.kelish_vaqti}</p>
+                            <p><strong>Ketish vaqti:</strong> ${davomat.ketish_vaqti}</p>
+                        `;
+                        davomatTable.appendChild(davomatRow);
+                    });
+                } else {
+                    davomatTable.classList.add('hidden');
+                    noDataMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Xatolik:', error);
+                alert('Xatolik yuz berdi.');
+            }
+        }
+    </script>
+</body>
+</html>
