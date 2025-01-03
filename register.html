@@ -1,83 +1,42 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ro'yxatdan o'tish</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f5f5f5;
-        }
-    </style>
+    <title>Register</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen flex items-center justify-center">
-        <div id="registerModal" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
-            <h3 class="text-center text-2xl font-semibold mb-4">Ro'yxatdan o'tish</h3>
-            <form id="registerForm" class="space-y-4">
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
-                </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Parol</label>
-                    <input type="password" id="password" name="password" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
-                </div>
-                <div>
-                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Parolni tasdiqlash</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
-                </div>
-                <div class="mt-4">
-                    <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">Ro'yxatdan o'tish</button>
-                </div>
-            </form>
-            <p id="registerError" class="text-red-500 text-center mt-2 hidden">Xatolik yuz berdi! Ma'lumotlar noto'g'ri.</p>
-        </div>
-    </div>
+<body>
+    <h1>Register</h1>
+    <form id="register-form">
+        <label for="email">Email:</label>
+        <input type="email" id="email" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        <br>
+        <button type="submit">Register</button>
+    </form>
 
     <script>
-        const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
-        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'; // Supabase API kaliti
-        const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTkyMjczMywiZXhwIjoyMDUxNDk4NzMzfQ.WDJAhqH8Z5uQJtvt2ckocwmOPR_GUOeqI7xs0JgdLvQ'; // Supabase Service Role kaliti
+        const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co'; // Supabase URL
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'; // Supabase anonim API kaliti
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
 
-            if (password !== confirmPassword) {
-                document.getElementById('registerError').innerText = 'Parollar bir xil emas!';
-                document.getElementById('registerError').classList.remove('hidden');
-                return;
-            }
+            const { user, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+            });
 
-            try {
-                const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${supabaseServiceRoleKey}`
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const result = await response.json();
-
-                if (result.user) {
-                    alert('Ro\'yxatdan muvaffaqiyatli o\'tdingiz!');
-                } else {
-                    document.getElementById('registerError').innerText = result.message || 'Xatolik yuz berdi!';
-                    document.getElementById('registerError').classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Xatolik:', error);
-                document.getElementById('registerError').innerText = 'Xatolik yuz berdi!';
-                document.getElementById('registerError').classList.remove('hidden');
+            if (error) {
+                console.error('Error registering:', error.message);
+            } else {
+                console.log('User registered:', user);
             }
         });
     </script>
