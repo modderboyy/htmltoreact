@@ -111,11 +111,37 @@
         // Login qilish funksiyasi
         async function handleLogin(email, password) {
     try {
-        const response = await fetch('login.php', {
+        const response = await fetch('https://kbzxwaolakuykdbhfmuz.supabase.co/auth/v1/token?grant_type=password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8' // "anonpublic" kalit
+            },
             body: JSON.stringify({ email, password })
         });
+
+        const result = await response.json();
+        if (result.access_token) {
+            localStorage.setItem('userLoggedIn', 'true');
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('qrScanner').classList.remove('hidden');
+            requestCameraPermission(); // Kamerani ishga tushirish
+
+            // Foydalanuvchining roli tekshiriladi
+            if (result.role === 'admin') {
+                document.getElementById('davomatSababiButton').classList.remove('hidden');
+            } else {
+                document.getElementById('davomatSababiButton').classList.add('hidden');
+            }
+        } else {
+            document.getElementById('loginError').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Xatolik yuz berdi:', error);
+        document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
+        document.getElementById('loginError').classList.remove('hidden');
+    }
+}
 
         const result = await response.json();
         if (result.status === 'success') {
@@ -137,6 +163,8 @@
         console.error('Xatolik yuz berdi:', error);
         document.getElementById('loginError').innerText = 'Xatolik yuz berdi.';
         document.getElementById('loginError').classList.remove('hidden');
+    }
+}e('hidden');
     }
 }
 
