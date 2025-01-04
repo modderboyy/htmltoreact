@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xodimlar Davomati</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <!-- Login Modal -->
+        <div id="loginModal" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+            <h3 class="text-center text-2xl font-semibold mb-4">Tizimga Kirish</h3>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Parol</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 mt-1 text-sm border border-gray-300 rounded-md" required>
+                </div>
+                <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                    Tizimga Kirish
+                </button>
+            </form>
+            <p id="loginError" class="text-red-500 text-center mt-2 hidden"></p>
+        </div>
+
+        <!-- QR Scanner -->
+        <div id="qrScanner" class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg hidden">
+            <h3 class="text-center text-2xl font-semibold mb-4">"Yettilik" Davomati</h3>
+            <p class="text-center mb-4">QR kodni skanerlash orqali xodimlar davomati tizimiga kirish mumkin.</p>
+            <div id="reader"></div>
+            <p id="scanResult" class="text-center text-blue-600 font-semibold mt-4" style="font-size: 20px;"></p>
+            <button id="adminButton" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4 hidden">
+                Davomat sababini kiritish
+            </button>
+        </div>
+
+        <!-- Attendance Reason Modal -->
+        <div id="reasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white p-6 rounded-lg w-96">
+                <h3 class="text-xl font-semibold mb-4">Davomat Sababini Kiriting</h3>
+                <div id="employeeList" class="max-h-60 overflow-y-auto"></div>
+                <button onclick="saveReasons()" class="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 mt-4">
+                    Saqlash
+                </button>
+                <button onclick="closeReasonModal()" class="w-full px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 mt-2">
+                    Yopish
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase initialization
+        const supabase = supabase.createClient(
+            'https://kbzxwaolakuykdbhfmuz.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'
+        )
+
+        let currentUser = null;
+        let html5QrcodeScanner = null;
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            const email = document.getElementById('email').value
+            const password = document.getElementById('password').value
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+                if (error) throw error
+
+                // Get user role from users table
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', data.user.id)
+                    .single()
+
+                if (userError) throw userError
+
+                currentUser = {
+                    ...data.user,
+                    role: userData.role
+                }
+
+                document.getElementById('loginModal').classList.add('hidden')
+                document.getElementById('qrScanner').classList.remove('hidden')
+                
+                // Show admin button if user is admin
+                if (userData.role === 'admin') {
+                    document.getElementById('adminButton').classList.remove('hidden')
+                }
+
+                startQRScanner()
+            } catch (error) {
+                document.getElementById('loginError').textContent = error.message
+                document.getElementById('loginError').classList.remove('hidden')
+            }
+        })
+
+        // QR Scanner
+        function startQRScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner('reader', {
+                fps: 10,
+                qrbox: 250,
+                aspectRatio: 1.0,
+                supportedScanTypes: [Html5QrcodeScanner.SCAN_TYPE_CAMERA]
+            })
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanError)
+        }
+
+        async function onScanSuccess(decodedText) {
+            try {
+                await checkLocation()
+                
+                // Get user by QR code
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('id, name')
+                    .eq('qr_code', decodedText)
+                    .single()
+
+                if (userError) throw new Error('Foydalanuvchi topilmadi')
+
+                const now = new Date()
+                const today = now.toISOString().split('T')[0]
+
+                // Check existing attendance
+                const { data: existingAttendance, error: existingError } = await supabase
+                    .from('attendance')
+                    .select('id, check_in, check_out')
+                    .eq('user_id', userData.id)
+                    .eq('date', today)
+                    .single()
+
+                if (existingAttendance) {
+                    if (!existingAttendance.check_out) {
+                        // Update check_out time
+                        const { error: updateError } = await supabase
+                            .from('attendance')
+                            .update({ check_out: now.toISOString() })
+                            .eq('id', existingAttendance.id)
+
+                        if (updateError) throw updateError
+                        document.getElementById('scanResult').textContent = `${userData.name}: Chiqish vaqti qayd etildi`
+                    } else {
+                        document.getElementById('scanResult').textContent = `${userData.name}: Bugun uchun davomat allaqachon to'liq qayd etilgan`
+                    }
+                } else {
+                    // Create new attendance record
+                    const { error: insertError } = await supabase
+                        .from('attendance')
+                        .insert([{
+                            user_id: userData.id,
+                            check_in: now.toISOString(),
+                            date: today
+                        }])
+
+                    if (insertError) throw insertError
+                    document.getElementById('scanResult').textContent = `${userData.name}: Kirish vaqti qayd etildi`
+                }
+            } catch (error) {
+                document.getElementById('scanResult').textContent = 'Xatolik: ' + error.message
+            }
+        }
+
+        function onScanError(error) {
+            console.warn(error)
+        }
+
+        // Location checking
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371
+            const dLat = (lat2 - lat1) * (Math.PI / 180)
+            const dLon = (lon2 - lon1) * (Math.PI / 180)
+            
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            return R * c
+        }
+
+        function checkLocation() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude
+                        const userLon = position.coords.longitude
+                        const targetLat = 38.6204415
+                        const targetLon = 66.2424020
+                        const allowedDistance = 5
+
+                        const distance = haversineDistance(userLat, userLon, targetLat, targetLon)
+                        
+                        if (distance <= allowedDistance) {
+                            resolve()
+                        } else {
+                            reject(new Error(`Belgilangan hududdan tashqaridasiz. Masofa: ${distance.toFixed(2)} km`))
+                        }
+                    },
+                    () => reject(new Error('Geolokatsiyaga ruxsat berilmagan'))
+                )
+            })
+        }
+
+        // Admin functionality
+        document.getElementById('adminButton').addEventListener('click', async () => {
+            if (currentUser?.role !== 'admin') return
+
+            try {
+                const { data: employees, error } = await supabase
+                    .from('users')
+                    .select('id, name')
+                    .neq('role', 'admin')
+
+                if (error) throw error
+
+                const employeeList = document.getElementById('employeeList')
+                employeeList.innerHTML = employees.map(emp => `
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">${emp.name}</label>
+                        <input
+                            type="text"
+                            id="reason_${emp.id}"
+                            class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md"
+                            placeholder="Sababini kiriting..."
+                        >
+                    </div>
+                `).join('')
+
+                document.getElementById('reasonModal').classList.remove('hidden')
+            } catch (error) {
+                alert('Xatolik yuz berdi: ' + error.message)
+            }
+        })
+
+        async function saveReasons() {
+            try {
+                const reasons = []
+                const inputs = document.querySelectorAll('[id^="reason_"]')
+                const today = new Date().toISOString().split('T')[0]
+
+                inputs.forEach(input => {
+                    if (input.value.trim()) {
+                        reasons.push({
+                            user_id: input.id.replace('reason_', ''),
+                            reason: input.value.trim(),
+                            date: today
+                        })
+                    }
+                })
+
+                if (reasons.length > 0) {
+                    const { error } = await supabase
+                        .from('attendance_reasons')
+                        .insert(reasons)
+
+                    if (error) throw error
+                }
+
+                closeReasonModal()
+                alert('Sabablar muvaffaqiyatli saqlandi')
+            } catch (error) {
+                alert('Xatolik yuz berdi: ' + error.message)
+            }
+        }
+
+        function closeReasonModal() {
+            document.getElementById('reasonModal').classList.add('hidden')
+        }
+    </script>
+</body>
+</html>
