@@ -4,41 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <!-- React va ReactDOM-ni qo'shish -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- Babel-ni qo'shish (JSX uchun) -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <!-- Supabase klientini qo'shish -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <h1>Register</h1>
-    <form id="register-form">
-        <label for="email">Email:</label>
-        <input type="email" id="email" required>
-        <br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" required>
-        <br>
-        <button type="submit">Register</button>
-    </form>
+    <div id="react-root"></div>
 
-    <script>
-        const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co'; // Supabase URL
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8'; // Supabase anonim API kaliti
+    <script type="text/babel">
+        const supabaseUrl = 'https://kbzxwaolakuykdbhfmuz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtienh3YW9sYWt1eWtkYmhmbXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjI3MzMsImV4cCI6MjA1MTQ5ODczM30.jnRurg0Tuaeax2pi3rXdwOjTeqbhehBm9FSdRq0YqP8';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        function Registration() {
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [message, setMessage] = React.useState('');
 
-            const { user, error } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-            });
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                try {
+                    const { data, error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                    });
+                    if (error) throw error;
+                    setMessage('Ro\'yxatdan o\'tish muvaffaqiyatli! Emailingizni tekshiring.');
+                } catch (error) {
+                    setMessage('Xatolik yuz berdi: ' + error.message);
+                }
+            };
 
-            if (error) {
-                console.error('Error registering:', error.message);
-            } else {
-                console.log('User registered:', user);
-            }
-        });
+            return (
+                <div className="registration-form">
+                    <h2>Ro'yxatdan o'tish</h2>
+                    <form onSubmit={handleSubmit}>
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Parol"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                        <button type="submit">Ro'yxatdan o'tish</button>
+                    </form>
+                    {message && <p>{message}</p>}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Registration />, document.getElementById('react-root'));
     </script>
 </body>
 </html>
+
