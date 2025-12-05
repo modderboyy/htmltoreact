@@ -12,7 +12,7 @@ This is a very ambitious request, and integrating Supabase with OAuth, WebSocket
 3.  **WebSockets (WSS):** For real-time updates and potentially for managing OAuth flows, you might use WebSockets. However, for a standard OAuth flow, it's often not the primary communication mechanism. Deep linking often handles the callback.
 4.  **Deep Linking:** This allows your app to be launched from a specific URL scheme (e.g., `modderid://...`). You'll need to configure this in your `AndroidManifest.xml` (Android) and `Info.plist` (iOS).
 5.  **Responsiveness:** Ensuring the UI looks good on all devices. This involves using `LayoutBuilder`, `MediaQuery`, and potentially adaptive widgets.
-6.  **State Management:** For a complex app like this, a state management solution (like Provider, Riverpod, or Bloc) would be highly beneficial. For simplicity, I'll stick to `setState` for now, but be aware of its limitations in larger apps.
+6.  **State Management:** For a complex app like this, a state management solution (like Provider, Riverpod, or Bloc) would be highly beneficial. For simplicity, I'll stick to `setState` for now, but be aware of its limitations in larger apps.###
 
 ---
 
